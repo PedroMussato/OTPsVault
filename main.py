@@ -14,6 +14,35 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
 from base64 import urlsafe_b64encode
 import base64
+from PIL import ImageGrab
+
+def save_otp(otps,password):
+    with open('.data', 'w') as data_file:
+        data_file.write(json.dumps(otps))
+    encrypt_file('.data',password)
+    os.remove('.data')
+
+def get_otps(password):
+    if os.path.exists('.data.enc'):
+        decrypt_file('.data.enc', password, '.data')
+        with open('.data', 'r') as data_file:
+            otps = json.loads(data_file.read())
+        encrypt_file('.data',password)    
+        os.remove('.data')
+    else:
+        otps = dict()
+    return otps
+
+def take_screenshot():
+    # Capture the entire screen
+    screenshot = ImageGrab.grab()
+
+    # Save the screenshot to a file
+    screenshot.save("screenshot.png")
+
+    # Close the screenshot
+    screenshot.close()
+
 
 def derive_key_from_password(password: str, salt: bytes) -> bytes:
     # Generate a key from a password
@@ -107,6 +136,13 @@ menu = \
 2 - record a otp
 0 - exit
 """
+menu2 = \
+"""
+1 - take a screenshot
+2 - import a qr code
+3 - type secret
+0 - exit
+"""
 
 # get password
 if os.path.exists('.secret'):
@@ -131,42 +167,35 @@ else:
                 secret_file.write(sha256hash(password))   
             with open('.data', 'w') as data_file:
                 data_file.write('')
+            break
         else:
             print('password not match')    
 
 while True:
+    otps = get_otps(password)
     print(menu)
 
     # allow user to select option
-    r = input('> ')
+    r = input(' > ')
     if r == '0':
         break
     elif r == '1': # if read otp
-        decrypt_file('.data.enc', password, '.data')
-        
-        with open('.data', 'r') as data_file:
-            otps = json.loads(data_file.read())
-        
-        encrypt_file('.data',password)
-        
-        os.remove('.data')
-        
         while True:
             for k in otps.keys():
-                print(k)
+                print(f' - {k}')
         
-            r = input('select the otp > ')
+            r = input('select the otp or type NONE to exit> ')
             if r in otps.keys():
+                totp = pyotp.TOTP(otps[r])
+                print(f"Your OTP is: {totp.now()}")
+                break
+            elif r == 'NONE':
                 break
             else:
                 print('otp not found, select again')
         
-        totp = pyotp.TOTP(otps[r])
-        print(f"Your OTP is: {totp.now()}")
-
 
     elif r == '2': # if record otp
-        otps = dict()
 
         while True:
             otpname = input('OTP name > ')
@@ -175,20 +204,34 @@ while True:
                 break
 
         while True:
-            otpqrcodepath = input('qrcode image path > ')
-            if os.path.exists(otpqrcodepath):
+            print(menu2)
+            r = input(' > ')
+
+            if r == '1':
+                take_screenshot()
+                qrstring = capture_and_decode('screenshot.png')        
+                secret = extract_secret(qrstring)
+                os.remove('screenshot.png')
+                otps[otpname] = secret
+                save_otp(otps,password)
+                break
+            elif r == '2':
+                while True:
+                    otpqrcodepath = input('qrcode image path > ')
+                    if os.path.exists(otpqrcodepath):
+                        break
+                    else:
+                        print('image not found')
+                secret = extract_secret(qrstring)
+                otps[otpname] = secret
+                save_otp(otps)
+                break
+            elif r == '3':
+                r = input('type the secret > ')
+                otps[otpname] = secret
+                save_otp(otps)
+                break
+            elif r == '0':
                 break
             else:
-                print('image not found')
-        
-        qrstring = capture_and_decode(otpqrcodepath)        
-        secret = extract_secret(qrstring)
-
-        otps[otpname] = secret
-
-        with open('.data', 'w') as data_file:
-            data_file.write(json.dumps(otps))
-
-        encrypt_file('.data',password)
-
-        os.remove('.data')
+                print('option not found, please type again')
