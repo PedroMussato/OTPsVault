@@ -109,7 +109,7 @@ menu = \
 """
 
 # get password
-if os.path.exists('.secret') and (os.path.exists('.data') or os.path.exists('.data.enc')):
+if os.path.exists('.secret'):
     while True:
         password = getpass.getpass('type your password to unlock otp vault > ')
         current_password_hash = sha256hash(password)
