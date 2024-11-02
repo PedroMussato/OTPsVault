@@ -125,7 +125,7 @@ def extract_secret(qr_data):
 
     # Add the query parameters to the result dictionary
     result['params'] = {k: v[0] for k, v in query_params.items()}  # Get the first value for each key
-
+    print(result)
     # Corrected return statement
     return result['params']['secret']
 
@@ -215,6 +215,7 @@ while True:
                 otps[otpname] = secret
                 save_otp(otps,password)
                 break
+
             elif r == '2':
                 while True:
                     otpqrcodepath = input('qrcode image path > ')
@@ -222,9 +223,10 @@ while True:
                         break
                     else:
                         print('image not found')
+                qrstring = capture_and_decode(otpqrcodepath)        
                 secret = extract_secret(qrstring)
                 otps[otpname] = secret
-                save_otp(otps)
+                save_otp(otps,password)
                 break
             elif r == '3':
                 r = input('type the secret > ')
