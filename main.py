@@ -125,7 +125,6 @@ def extract_secret(qr_data):
 
     # Add the query parameters to the result dictionary
     result['params'] = {k: v[0] for k, v in query_params.items()}  # Get the first value for each key
-    print(result)
     # Corrected return statement
     return result['params']['secret']
 
